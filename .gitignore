@@ -1,0 +1,16 @@
+# Node
+node_modules/
+
+# OS / editor
+.DS_Store
+*.log
+
+# OMC local state
+.omc/
+
+# Keystores (safety — none committed)
+*.keystore
+*.jks
+
+# Root build artifacts
+dist/

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Хифз</string>
+    <string name="title_activity_main">Хифз</string>
+    <string name="package_name">app.hifz.quran</string>
+    <string name="custom_url_scheme">app.hifz.quran</string>
+</resources>
