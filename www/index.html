@@ -3,13 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<meta name="theme-color" content="#0c1a20">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Хифз">
 <title>Хифз — Куран жаттоо машыгуусу</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -108,11 +101,12 @@ select:focus,input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(201
 .aya{cursor:pointer; transition:color .3s, text-shadow .3s}
 .aya:hover{color:#6d5416}
 .aya.in-range{color:#b07510; text-shadow:0 0 5px rgba(232,176,72,.5)}
-.aya.reciting{color:#d98a12; animation:glowpulse 1.7s ease-in-out infinite;
-  padding-bottom:.08em; -webkit-box-decoration-break:clone; box-decoration-break:clone;
-  background-image:linear-gradient(#a85f0a,#a85f0a), linear-gradient(rgba(150,100,15,.28),rgba(150,100,15,.28));
-  background-repeat:no-repeat,no-repeat; background-position:right bottom,right bottom;
-  background-size:var(--p,0%) 3px,100% 3px}
+.aya.reciting{color:#d98a12; animation:glowpulse 1.7s ease-in-out infinite}
+.sheet{position:relative}
+#ul-layer{position:absolute; inset:0; pointer-events:none; z-index:2}
+#ul-layer .ul{position:absolute; height:3px; border-radius:2px;
+  background:linear-gradient(90deg, rgba(217,138,18,.55), #b5730a);
+  box-shadow:0 0 7px rgba(240,180,70,.8)}
 @keyframes glowpulse{
   0%,100%{color:#c06d08; text-shadow:0 0 6px rgba(235,178,66,.7)}
   50%{color:#e6960f; text-shadow:0 0 16px rgba(248,196,96,1), 0 0 4px rgba(224,144,44,.8)}
@@ -360,7 +354,7 @@ function renderPage(){
     const txt = state.textArabic[a] || '';
     html += '<span class="aya" data-ayah="'+a+'">'+txt+'<span class="mark-num"> ﴿'+toArabicDigits(a)+'﴾ </span></span>';
   }
-  html += '</div></div>';
+  html += '</div><div id="ul-layer"></div></div>';
   page.innerHTML = html;
   page.querySelectorAll('.aya').forEach(el=> el.onclick = ()=> jumpToAyah(+el.dataset.ayah));
   applyRange();
@@ -376,6 +370,31 @@ function applyRange(){
   });
 }
 
+function drawUnderline(p){
+  const layer = $('ul-layer');
+  if(!layer) return;
+  layer.innerHTML='';
+  const el = state.recEl;
+  if(!el || !(p>0)) return;
+  const sheet = layer.parentElement;
+  const sr = sheet.getBoundingClientRect();
+  const rects = Array.from(el.getClientRects());
+  const total = rects.reduce((a,r)=>a+r.width,0);
+  if(!total) return;
+  let remain = Math.min(1,p) * total;
+  for(const r of rects){
+    if(remain <= 0.5) break;
+    const w = Math.min(r.width, remain);
+    remain -= w;
+    const d = document.createElement('div');
+    d.className='ul';
+    d.style.top   = (r.bottom - sr.top + 2) + 'px';
+    d.style.left  = (r.right - sr.left - w) + 'px';  // RTL: оңдон солго
+    d.style.width = w + 'px';
+    layer.appendChild(d);
+  }
+}
+
 function setReciting(ayah, scroll){
   const page = $('page'); let target=null;
   page.querySelectorAll('.aya').forEach(el=>{
@@ -384,7 +403,7 @@ function setReciting(ayah, scroll){
     if(on) target=el;
   });
   state.recEl = target;
-  if(target) target.style.setProperty('--p','0%');
+  drawUnderline(0);
   if(target && scroll!==false){
     const cr = page.getBoundingClientRect(), tr = target.getBoundingClientRect();
     page.scrollTop += (tr.top - cr.top) - page.clientHeight/2 + tr.height/2;
@@ -430,8 +449,10 @@ function loadCurrent(autoplay){
 audio.addEventListener('ended', ()=>{ if(state.playing) advance(); });
 audio.addEventListener('timeupdate', ()=>{
   if(!state.recEl || !audio.duration) return;
-  const p = Math.min(1, audio.currentTime/audio.duration)*100;
-  state.recEl.style.setProperty('--p', p.toFixed(1)+'%');
+  drawUnderline(audio.currentTime / audio.duration);
+});
+window.addEventListener('resize', ()=>{
+  if(state.recEl && audio.duration) drawUnderline(audio.currentTime/audio.duration);
 });
 audio.addEventListener('playing', ()=>{ els.status.textContent=''; });
 audio.addEventListener('error', ()=>{
@@ -498,11 +519,6 @@ $('close-settings').onclick = ()=> setSettings(false);
 // init
 els.surah.value=1; els.from.value=1; els.to.value=7;
 buildPlaylist(); loadText(); loadCurrent(false);
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
 </script>
 </body>
 </html>
